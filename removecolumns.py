@@ -1,77 +1,101 @@
 #based on the COMPOSER CLASSIFICATION WITH CROSS-MODAL TRANSFER LEARNING AND MUSICALLY-INFORMED AUGMENTATION article at ismir 
 #removes colomuns/phrases of notes with a pause threshold to avoid cutting off. Uses the ANN file to detect which notes to remove and mutes the same part from the audio 
+# not fixed! 
 import sys
-import random
 import librosa
 import numpy as np
 import os
 import soundfile as sf
+import random
 
-def extract_suitable_segments(annotation_data, pause_threshold=0.15):
-    """
-    Identify suitable segments for removal based on pauses.
-    """
-    suitable_segments = []
-    prev_offset = 0
+def has_suitable_pauses(segment, segments, min_pause_duration=0.05, max_distance=100, min_segment_duration=2):
+    onset, offset = segment
+    if offset - onset < min_segment_duration:
+        return False
 
-    for line in annotation_data:
-        onset, offset, _, _ = map(float, line.strip().split('\t'))
-        pause_duration = onset - prev_offset
-
-        if pause_duration >= pause_threshold:
-            suitable_segments.append((prev_offset, onset))
-        
-        prev_offset = offset
-
-    return suitable_segments
-
-def remove_random_segment(annotation_data, audio_data, sample_rate, pause_threshold=0.15):
-    suitable_segments = extract_suitable_segments(annotation_data, pause_threshold)
+    prev_pause = None
+    next_pause = None
     
-    if not suitable_segments:
-        return audio_data, annotation_data
+    for s_onset, s_offset in segments:
+        if s_offset >= onset:
+            break
 
-    # Select a random segment for removal
-    random_segment = random.choice(suitable_segments)
-    start_time, end_time = random_segment
+        if prev_pause is None or onset - s_offset < onset - prev_pause:
+            prev_pause = s_offset
 
-    # Print the duration of the removed segment
-    removed_duration = end_time - start_time
-    print(f"Removed segment duration: {removed_duration:.2f} seconds")
+    for s_onset, s_offset in segments:
+        if s_onset > offset:
+            if next_pause is None or s_onset - offset < next_pause - offset:
+                next_pause = s_onset
+            break
 
-    # Remove the segment from the audio
-    start_sample = librosa.time_to_samples(start_time, sr=sample_rate)
-    end_sample = librosa.time_to_samples(end_time, sr=sample_rate)
-    audio_data = np.concatenate((audio_data[:start_sample], audio_data[end_sample:]))
+    if prev_pause is None or next_pause is None:
+        return False
 
-    # Remove the segment from the annotation data
-    new_annotation_data = []
-    for line in annotation_data:
-        onset, offset, pitch, velocity = map(float, line.strip().split('\t'))
-        if onset < start_time or onset > end_time:
-            new_annotation_data.append(line)
+    return (
+        (onset - prev_pause >= min_pause_duration) and
+        (next_pause - offset >= min_pause_duration) and
+        (next_pause - prev_pause <= max_distance)
+    )
 
-    return audio_data, new_annotation_data
 
-def process_audio_and_annotations(ann_filename, audio_filename):
+
+def remove_segments_and_mute_audio(ann_filename, audio_filename, max_segments_per_minute=50):
     audio_data, sample_rate = librosa.load(audio_filename, sr=None)
+    mute_mask = np.ones_like(audio_data)
+
+    segments_removed = 0
+    total_removed_duration = 0
 
     with open(ann_filename, 'r') as ann_file:
-        annotation_data = ann_file.readlines()
+        lines = [line.strip().split('\t') for line in ann_file]
+        segments = [(float(onset), float(offset)) for onset, offset, _, _ in lines]
 
-    new_audio_data, new_annotation_data = remove_random_segment(annotation_data, audio_data, sample_rate)
+    suitable_segments = []
+    prev_offset = 0
+    for i, (onset, offset) in enumerate(segments[:-1]):
+        if has_suitable_pauses((onset, offset), segments):
+            suitable_segments.append((onset, offset))
+        else:
+            print(f"Not suitable: {onset}, {offset}")
 
-    # Save the new audio file
-    output_audio_filename = os.path.splitext(audio_filename)[0] + '_removed_segment.flac'
-    sf.write(output_audio_filename, new_audio_data, sample_rate)
+    segments_by_minute = {}
+    for start, end in suitable_segments:
+        minute = int(start // 60)
+        if minute not in segments_by_minute:
+            segments_by_minute[minute] = []
+        segments_by_minute[minute].append((start, end))
 
-    # Save the new annotation file
-    output_ann_filename = os.path.splitext(ann_filename)[0] + '_removed_segment.ann'
+    removed_segments = []
+
+    for minute, segment_list in segments_by_minute.items():
+        segments_to_remove = min(max_segments_per_minute, len(segment_list))
+        removed_segments_minute = random.sample(segment_list, segments_to_remove)
+        removed_segments.extend(removed_segments_minute)
+
+        for start, end in removed_segments_minute:
+            start_sample = librosa.time_to_samples(start, sr=sample_rate)
+            end_sample = librosa.time_to_samples(end, sr=sample_rate)
+            mute_mask[start_sample:end_sample] = 0
+            total_removed_duration += (end - start)
+            segments_removed += 1
+
+    muted_audio_data = audio_data * mute_mask
+    output_audio_filename = os.path.splitext(audio_filename)[0] + '_removed_segments.flac'
+    sf.write(output_audio_filename, muted_audio_data, sample_rate)
+
+    print(f"Removed segments: {segments_removed}")
+    print(f"Total removed duration: {total_removed_duration:.2f} seconds")
+
+    output_ann_data = []
+    for i, line in enumerate(lines):
+        onset, offset = segments[i]
+        if not any(start <= onset < end for start, end in removed_segments):
+            output_ann_data.append('\t'.join(line) + '\n')
+
+    output_ann_filename = os.path.splitext(ann_filename)[0] + '_removed_segments.ann'
     with open(output_ann_filename, 'w') as output_ann_file:
-        output_ann_file.writelines(new_annotation_data)
-
-def main(ann_filename, audio_filename):
-    process_audio_and_annotations(ann_filename, audio_filename)
+        output_ann_file.writelines(output_ann_data)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -81,4 +105,5 @@ if __name__ == '__main__':
     ann_filename = sys.argv[1]
     audio_filename = sys.argv[2]
 
-    main(ann_filename, audio_filename)
+    remove_segments_and_mute_audio(ann_filename, audio_filename)
+
