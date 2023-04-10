@@ -1,20 +1,21 @@
 import os
 import argparse
-import librosa
 import numpy as np
-import soundfile as sf
-from pydub import AudioSegment
-from pydub.effects import reverb
+from pedalboard import Pedalboard, Reverb
+from pedalboard.io import AudioFile
 
-def apply_reverb(audio_file, output_dir, room_scale, reverberance):
-    samples, sample_rate = librosa.load(audio_file, sr=None, mono=False)
-    input_audio = AudioSegment.from_mono_audiosegments(
-        AudioSegment.from_file(audio_file, format='flac', channels=1, frame_rate=sample_rate, sample_width=samples.dtype.itemsize * 8)[:samples.shape[1]],
-        AudioSegment.from_file(audio_file, format='flac', channels=1, frame_rate=sample_rate, sample_width=samples.dtype.itemsize * 8)[samples.shape[1]:]
-    )
-    output_audio = reverb(input_audio, room_scale=room_scale, reverberance=reverberance)
-    output_audio_file = os.path.join(output_dir, os.path.basename(audio_file))
-    output_audio.export(output_audio_file, format='flac')
+def apply_reverb(input_audio_file, output_audio_file, room_size, wet_level):
+    with AudioFile(input_audio_file) as input_file:
+        audio = input_file.read(input_file.frames)
+        samplerate = input_file.samplerate
+
+    reverb_effect = Reverb(room_size=room_size / 100.0, wet_level=wet_level / 100.0)
+    pedalboard = Pedalboard([reverb_effect])
+
+    processed_audio = pedalboard(audio, samplerate)
+
+    with AudioFile(output_audio_file, 'w', samplerate, audio.shape[0]) as output_file:
+        output_file.write(processed_audio)
 
 def main():
     parser = argparse.ArgumentParser(description="Apply reverb to audio files")
@@ -27,7 +28,11 @@ def main():
 
     os.makedirs(args.output_directory, exist_ok=True)
 
-    apply_reverb(args.input_audio_file, args.output_directory, args.room_scale, args.reverberance)
+    input_filename = os.path.basename(args.input_audio_file)
+    output_filename = os.path.splitext(input_filename)[0] + "_reverb" + os.path.splitext(input_filename)[1]
+    output_file_path = os.path.join(args.output_directory, output_filename)
+
+    apply_reverb(args.input_audio_file, output_file_path, args.room_scale, args.reverberance)
 
 if __name__ == "__main__":
     main()
