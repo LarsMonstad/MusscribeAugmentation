@@ -38,6 +38,7 @@ def apply_gain_and_chorus(input_audio_file, input_ann_file, output_directory, ga
     output_ann_filename = generate_output_filename(os.path.basename(input_ann_file), random_suffix)
     output_ann_file_path = os.path.join(output_directory, output_ann_filename)
     os.system(f'cp "{input_ann_file}" "{output_ann_file_path}"')
+    return output_ann_file_path
 
 def main():
     parser = argparse.ArgumentParser(description="Apply gain and chorus effects to audio files")
