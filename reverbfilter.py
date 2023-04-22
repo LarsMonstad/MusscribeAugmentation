@@ -34,7 +34,22 @@ def random_word(length):
 # 3. High highpass: python reverbfilter.py input.flac input.ann output 0 20000 7000
 
 
-def apply_reverb_and_filters(input_audio_file, output_audio_file, room_size, low_cutoff, high_cutoff):
+def random_word(length):
+    return ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
+
+
+def generate_output_filename(input_filename, random_suffix):
+    return os.path.splitext(input_filename)[0] + "_reverb_filters_" + random_suffix + os.path.splitext(input_filename)[1]
+
+
+def apply_reverb_and_filters(input_audio_file, input_ann_file, output_directory, room_size, low_cutoff, high_cutoff):
+    random_suffix = random_word(5)
+    os.makedirs(output_directory, exist_ok=True)
+
+    # Generate output audio file name and path
+    output_audio_filename = generate_output_filename(os.path.basename(input_audio_file), random_suffix)
+    output_audio_file_path = os.path.join(output_directory, output_audio_filename)
+
     with AudioFile(input_audio_file) as input_file:
         audio = input_file.read(input_file.frames)
         samplerate = input_file.samplerate
@@ -47,8 +62,15 @@ def apply_reverb_and_filters(input_audio_file, output_audio_file, room_size, low
 
     processed_audio = pedalboard(audio, samplerate)
 
-    with AudioFile(output_audio_file, 'w', samplerate, audio.shape[0]) as output_file:
+    with AudioFile(output_audio_file_path, 'w', samplerate, audio.shape[0]) as output_file:
         output_file.write(processed_audio)
+
+
+    # Copy the annotation file to the output directory with a modified name
+    output_ann_filename = generate_output_filename(os.path.basename(input_ann_file), random_suffix)
+    output_ann_file_path = os.path.join(output_directory, output_ann_filename)
+    os.system(f'cp "{input_ann_file}" "{output_ann_file_path}"')
+
 
 def main():
     parser = argparse.ArgumentParser(description="Apply reverb and filters to audio files")
@@ -63,16 +85,8 @@ def main():
 
     os.makedirs(args.output_directory, exist_ok=True)
 
-    input_filename = os.path.basename(args.input_audio_file)
-    random_suffix = random_word(5)
-    output_filename = os.path.splitext(input_filename)[0] + "_reverb_filters_" + random_suffix + os.path.splitext(input_filename)[1]
-    output_file_path = os.path.join(args.output_directory, output_filename)
+    apply_reverb_and_filters(args.input_audio_file, args.input_ann_file, args.output_directory, args.room_scale, args.low_cutoff, args.high_cutoff)
 
-    apply_reverb_and_filters(args.input_audio_file, output_file_path, args.room_scale, args.low_cutoff, args.high_cutoff)
-# Copy the annotation file to the output directory without modifying it
-    output_ann_filename = os.path.splitext(os.path.basename(args.input_ann_file))[0] + "_reverb_filters_" + random_suffix + os.path.splitext(args.input_ann_file)[1]
-    output_ann_file_path = os.path.join(args.output_directory, output_ann_filename)
-    os.system(f'cp "{args.input_ann_file}" "{output_ann_file_path}"')
 
 if __name__ == "__main__":
     main()
