@@ -31,14 +31,12 @@ def update_ann_file(ann_content, stretch_factor):
 
 
 # Apply time stretch to audio and annotation files
-def apply_time_stretch(audio_file, ann_file, output_dir, stretch_factor):
+def apply_time_stretch(audio_file, ann_file, output_file_path, stretch_factor):
     # Load audio file
     samples, sample_rate = librosa.load(audio_file, sr=None, mono=False)
 
     # Apply the time-stretch transformation directly
     time_stretched_samples = librosa.effects.time_stretch(samples, rate=stretch_factor)
-    #time_stretched_samples = librosa.effects.time_stretch(samples, rate=1/stretch_factor)
-
 
     # Print input and output shapes and the stretch factor
     print(f"Input samples shape: {samples.shape}")
@@ -46,14 +44,15 @@ def apply_time_stretch(audio_file, ann_file, output_dir, stretch_factor):
     print(f"Stretch factor: {stretch_factor}")
 
     # Save the time-stretched audio
-    output_audio_file = os.path.join(output_dir, os.path.basename(audio_file))
-    sf.write(output_audio_file, time_stretched_samples.T, sample_rate, format='flac')
+    sf.write(output_file_path, time_stretched_samples.T, sample_rate, format='flac')
 
     # Update and save the time-stretched annotations
     ann_content = load_ann_file(ann_file)
     updated_ann_content = update_ann_file(ann_content, stretch_factor)
-    output_ann_file = os.path.join(output_dir, os.path.basename(ann_file))
+    output_ann_file = os.path.splitext(output_file_path)[0] + os.path.splitext(ann_file)[1]
     save_ann_file(output_ann_file, updated_ann_content)
+
+
 
 def main():
     # Set up argument parser
@@ -75,15 +74,18 @@ def main():
     # Make sure the output directory exists
     os.makedirs(args.output_directory, exist_ok=True)
 
+    # Generate output file path for the audio file
+    output_file_name = os.path.basename(args.input_audio_file)
+    output_file_path = os.path.join(args.output_directory, output_file_name)
+
     # Apply time stretch to audio and annotation files
     apply_time_stretch(
         args.input_audio_file,
         args.input_ann_file,
-        args.output_directory,
+        output_file_path,
         args.stretch_factor,
     )
 
 if __name__ == "__main__":
     main()
-# Examp
 
