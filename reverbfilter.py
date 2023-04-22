@@ -7,10 +7,6 @@ from pedalboard import Pedalboard, Reverb, LowpassFilter, HighpassFilter
 from pedalboard.io import AudioFile
 
 
-def random_word(length):
-    return ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
-
-
 # Ranges 
 
 #Reverb 0  off. low to high range: 30 - 100  
