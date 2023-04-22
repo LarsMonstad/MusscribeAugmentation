@@ -6,7 +6,6 @@ import numpy as np
 from pedalboard import Pedalboard, Reverb, LowpassFilter, HighpassFilter
 from pedalboard.io import AudioFile
 
-
 # Ranges 
 
 #Reverb 0  off. low to high range: 30 - 100  
@@ -28,7 +27,6 @@ from pedalboard.io import AudioFile
 # 1. No highpass: python reverbfilter.py input.flac input.ann output 0 20000 20
 # 2. Low highpass: python reverbfilter.py input.flac input.ann output 0 20000 4000
 # 3. High highpass: python reverbfilter.py input.flac input.ann output 0 20000 7000
-
 
 def random_word(length):
     return ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
@@ -66,6 +64,7 @@ def apply_reverb_and_filters(input_audio_file, input_ann_file, output_directory,
     output_ann_filename = generate_output_filename(os.path.basename(input_ann_file), random_suffix)
     output_ann_file_path = os.path.join(output_directory, output_ann_filename)
     os.system(f'cp "{input_ann_file}" "{output_ann_file_path}"')
+    return output_ann_file_path
 
 
 def main():
