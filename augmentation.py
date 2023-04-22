@@ -2,7 +2,7 @@ import os
 import argparse
 import random
 import string
-from tempoaug2 import apply_time_stretch
+from time_stretch import apply_time_stretch
 from pitch_shift import apply_pitch_shift
 from reverbfilter import apply_reverb_and_filters
 from distortion import apply_distortion
