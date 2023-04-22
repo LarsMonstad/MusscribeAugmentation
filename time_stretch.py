@@ -39,9 +39,9 @@ def apply_time_stretch(audio_file, ann_file, output_file_path, stretch_factor):
     time_stretched_samples = librosa.effects.time_stretch(samples, rate=stretch_factor)
 
     # Print input and output shapes and the stretch factor
-    print(f"Input samples shape: {samples.shape}")
-    print(f"Output samples shape: {time_stretched_samples.shape}")
-    print(f"Stretch factor: {stretch_factor}")
+    #print(f"Input samples shape: {samples.shape}")
+    #print(f"Output samples shape: {time_stretched_samples.shape}")
+    #print(f"Stretch factor: {stretch_factor}")
 
     # Save the time-stretched audio
     sf.write(output_file_path, time_stretched_samples.T, sample_rate, format='flac')
