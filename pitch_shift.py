@@ -25,11 +25,11 @@ def update_ann_file(ann_content, pitch_shift):
 
 def apply_pitch_shift(audio_file, ann_file, output_file_path, pitch_shift):
     samples, sample_rate = librosa.load(audio_file, sr=None, mono=False)
-    pitch_shifted_samples = librosa.effects.pitch_shift(samples, sample_rate, n_steps=pitch_shift)
+    pitch_shifted_samples = librosa.effects.pitch_shift(samples, sr=sample_rate, n_steps=pitch_shift)
 
-    print(f"Input samples shape: {samples.shape}")
-    print(f"Output samples shape: {pitch_shifted_samples.shape}")
-    print(f"Pitch shift: {pitch_shift} semitones")
+    #print(f"Input samples shape: {samples.shape}")
+    #print(f"Output samples shape: {pitch_shifted_samples.shape}")
+    #print(f"Pitch shift: {pitch_shift} semitones")
 
     sf.write(output_file_path, pitch_shifted_samples.T, sample_rate, format='flac')
 
