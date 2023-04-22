@@ -51,6 +51,7 @@ def apply_time_stretch(audio_file, ann_file, output_file_path, stretch_factor):
     updated_ann_content = update_ann_file(ann_content, stretch_factor)
     output_ann_file = os.path.splitext(output_file_path)[0] + os.path.splitext(ann_file)[1]
     save_ann_file(output_ann_file, updated_ann_content)
+    return output_ann_file
 
 
 
