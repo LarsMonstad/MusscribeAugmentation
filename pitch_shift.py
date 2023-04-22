@@ -23,7 +23,7 @@ def update_ann_file(ann_content, pitch_shift):
         updated_content.append(updated_line)
     return updated_content
 
-def apply_pitch_shift(audio_file, ann_file, output_dir, pitch_shift):
+def apply_pitch_shift(audio_file, ann_file, output_file_path, pitch_shift):
     samples, sample_rate = librosa.load(audio_file, sr=None, mono=False)
     pitch_shifted_samples = librosa.effects.pitch_shift(samples, sample_rate, n_steps=pitch_shift)
 
@@ -31,13 +31,13 @@ def apply_pitch_shift(audio_file, ann_file, output_dir, pitch_shift):
     print(f"Output samples shape: {pitch_shifted_samples.shape}")
     print(f"Pitch shift: {pitch_shift} semitones")
 
-    output_audio_file = os.path.join(output_dir, os.path.basename(audio_file))
-    sf.write(output_audio_file, pitch_shifted_samples.T, sample_rate, format='flac')
+    sf.write(output_file_path, pitch_shifted_samples.T, sample_rate, format='flac')
 
     ann_content = load_ann_file(ann_file)
     updated_ann_content = update_ann_file(ann_content, pitch_shift)
-    output_ann_file = os.path.join(output_dir, os.path.basename(ann_file))
+    output_ann_file = os.path.splitext(output_file_path)[0] + os.path.splitext(ann_file)[1]
     save_ann_file(output_ann_file, updated_ann_content)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Pitch-shift audio and update annotation files")
@@ -48,9 +48,11 @@ def main():
 
     args = parser.parse_args()
 
-    os.makedirs(args.output_directory, exist_ok=True)
+    # Generate output file path for the audio file
+    output_file_name = os.path.basename(args.input_audio_file)
+    output_file_path = os.path.join(args.output_directory, output_file_name)
 
-    apply_pitch_shift(args.input_audio_file, args.input_ann_file, args.output_directory, args.pitch_shift)
+    apply_pitch_shift(args.input_audio_file, args.input_ann_file, output_file_path, args.pitch_shift)
 
 if __name__ == "__main__":
     main()
