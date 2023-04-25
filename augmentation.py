@@ -2,6 +2,8 @@ import os
 import argparse
 import random
 import string
+import pathlib
+from annmidi import tsv_to_midi
 from time_stretch import apply_time_stretch
 from pitch_shift import apply_pitch_shift
 from reverbfilter import apply_reverb_and_filters
@@ -39,6 +41,7 @@ def main():
     new_ann_files = []
 
     # Apply time stretch
+    #perhaps random time stretch values instead of fixed? need to test to check if there is a significant f1 score. 
     for i, stretch_factor in tqdm(enumerate([0.8, 1.2, 1.4]), desc="Time Stretch"):
         random_suffix = random_word(5)
         output_filename = generate_output_filename(os.path.basename(args.input_audio_file), "timestretch", stretch_factor, random_suffix)
@@ -47,7 +50,7 @@ def main():
         new_ann_files.append(output_ann_file)
 
 
-    # Apply pitch shift
+    # Apply pitch shift # perhaps random pitch shift values instead of fixed? need to test 
     for i, semitones in tqdm(enumerate([-2, 2, 4]), desc="Pitch Shift"):
         random_suffix = random_word(5)
         output_filename = generate_output_filename(os.path.basename(args.input_audio_file), "pitchshift", semitones, random_suffix)
@@ -55,16 +58,19 @@ def main():
         output_ann_file = apply_pitch_shift(args.input_audio_file, args.input_ann_file, output_file_path, semitones)
         new_ann_files.append(output_ann_file)
 
-    # Apply reverb and filters
+
+    #both room scale and dry wey scale for reverb 
     room_scales = [0, 30, 100]
-    low_cutoffs = [20000, 16300, 17500]
-    high_cutoffs = [20, 4000, 7000]
+
+    #cutoff_pairs=(high_cutoff and low_cutoff) used in pairs to avoid filters blocking each other out. # settings needs to be changed todo!  
+    cutoff_pairs = [(20, 20000), (300, 20000), (3000, 20000),(20, 16300), (20, 17500), (20, 18000)]
+
 
     for i, room_scale in tqdm(enumerate(room_scales), desc="Reverb and filter"):
-        low_cutoff = random.choice(low_cutoffs)
-        high_cutoff = random.choice(high_cutoffs)
+        high_cutoff, low_cutoff  = random.choice(cutoff_pairs)
         output_ann_file = apply_reverb_and_filters(args.input_audio_file, args.input_ann_file, output_directory, room_scale, low_cutoff, high_cutoff)
         new_ann_files.append(output_ann_file)
+
 
     # Apply distortion
     depths = [0.2, 0.3, 0.5]
@@ -78,6 +84,11 @@ def main():
     #convert_ann_files(output_directory)
     for ann_file in tqdm(new_ann_files, desc= "Converting ann files to midi"):
         ann_to_midi(ann_file)
+        #file_extension = pathlib.Path(ann_file).suffix
+        #if file_extension == ".ann":
+        #    ann_to_midi(ann_file)
+        #elif file_extension==".tsv":
+        #    tsv_to_midi(ann_file)
 
 if __name__ == "__main__":
     main()
