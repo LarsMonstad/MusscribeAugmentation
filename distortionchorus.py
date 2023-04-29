@@ -25,7 +25,7 @@ def apply_gain_and_chorus(input_audio_file, input_ann_file, output_directory, ga
         samplerate = input_file.samplerate
 
     gain_effect = Distortion(drive_db=gain)
-    chorus_effect = Chorus(depth=chorus_depth, rate_hz=chorus_rate, centre_delay_ms=7.0, feedback=0.3, mix = 0.5)
+    chorus_effect = Chorus(depth=chorus_depth, rate_hz=chorus_rate, centre_delay_ms=7.0, feedback=0.3, mix = 0.3)
 
     pedalboard = Pedalboard([gain_effect, chorus_effect])
 
