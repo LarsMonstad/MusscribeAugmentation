@@ -3,6 +3,8 @@ import librosa
 import numpy as np
 import soundfile as sf
 import os
+#based on the COMPOSER CLASSIFICATION WITH CROSS-MODAL TRANSFER LEARNING AND MUSICALLY-INFORMED AUGMENTATION article at ismir 
+#removes colomuns/phrases of notes with a pause threshold to avoid cutting off. Uses the ANN file to detect which notes to remove and mutes the same part from the audio 
 #from plot import create_comparison_plot
 
 def insert_silence(audio_file, silence_ranges, output_file):
